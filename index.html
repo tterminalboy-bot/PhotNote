@@ -83,22 +83,22 @@ async function instagramOcrVariants(file){
  else {const objectUrl=URL.createObjectURL(file);source=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=objectUrl});dispose=()=>URL.revokeObjectURL(objectUrl)}
  try{
   const w=source.width||source.naturalWidth,h=source.height||source.naturalHeight;
-  const scale=Math.min(2.2,2800/Math.max(w,h),Math.sqrt(7000000/(w*h)));
+  const scale=Math.min(2.2,3000/Math.max(w,h),Math.sqrt(7000000/(w*h)));
   const base=document.createElement('canvas');base.width=Math.max(1,Math.round(w*scale));base.height=Math.max(1,Math.round(h*scale));
   const ctx=base.getContext('2d',{willReadFrequently:true});ctx.drawImage(source,0,0,base.width,base.height);
-  const raw=await imageBlob(base),pixels=ctx.getImageData(0,0,base.width,base.height),gray=base.cloneNode();gray.width=base.width;gray.height=base.height;
-  const gctx=gray.getContext('2d',{willReadFrequently:true}),contrast=pixels.data.slice(),binary=pixels.data.slice(),inverse=pixels.data.slice();
-  for(let i=0;i<contrast.length;i+=4){
-   const y=.299*pixels.data[i]+.587*pixels.data[i+1]+.114*pixels.data[i+2];
-   const c=Math.max(0,Math.min(255,(y-128)*1.55+128)),v=y>155?255:0,iv=255-v;
-   contrast[i]=contrast[i+1]=contrast[i+2]=c;
-   binary[i]=binary[i+1]=binary[i+2]=v;
-   inverse[i]=inverse[i+1]=inverse[i+2]=iv;
-  }
-  gctx.putImageData(new ImageData(contrast,base.width,base.height),0,0);const enhanced=await imageBlob(gray);
-  gctx.putImageData(new ImageData(binary,base.width,base.height),0,0);const threshold=await imageBlob(gray);
-  gctx.putImageData(new ImageData(inverse,base.width,base.height),0,0);const inverted=await imageBlob(gray);
-  return [raw,enhanced,threshold,inverted];
+  const candidates=[{blob:await imageBlob(base),mode:'11'}];
+  const cropAndEnhance=(x,y,cw,ch,mode)=>{
+   const sx=Math.round(base.width*x),sy=Math.round(base.height*y),sw=Math.round(base.width*cw),sh=Math.round(base.height*ch);
+   const zoom=Math.min(1.7,2600/Math.max(sw,sh));const crop=document.createElement('canvas');crop.width=Math.max(1,Math.round(sw*zoom));crop.height=Math.max(1,Math.round(sh*zoom));
+   const cctx=crop.getContext('2d',{willReadFrequently:true});cctx.drawImage(base,sx,sy,sw,sh,0,0,crop.width,crop.height);
+   const pixels=cctx.getImageData(0,0,crop.width,crop.height),data=pixels.data;
+   for(let i=0;i<data.length;i+=4){const lum=.299*data[i]+.587*data[i+1]+.114*data[i+2];const enhanced=Math.max(0,Math.min(255,(lum-112)*1.75+128));data[i]=data[i+1]=data[i+2]=enhanced}
+   cctx.putImageData(pixels,0,0);return imageBlob(crop).then(blob=>candidates.push({blob,mode}));
+  };
+  // Les photos montrent souvent une partie de l’écran en biais ; le pseudo reste dans l’en-tête du profil.
+  await cropAndEnhance(.06,.02,.9,.76,'11');
+  await cropAndEnhance(.1,.16,.84,.58,'6');
+  return candidates;
  }finally{dispose()}
 }
 function instagramDetailsFromOcr(results){
@@ -108,7 +108,7 @@ function instagramDetailsFromOcr(results){
   const h=String(value||'').replace(/^@/,'').replace(/[.,;:!?]+$/,'');
   if(!/^[A-Za-z0-9._]{1,30}$/.test(h)||reserved.has(h.toLowerCase())||excluded.has(h.toLowerCase())||!/[A-Za-z]/.test(h))return;
   const key=h.toLowerCase(),entry=map.get(key)||{handle:h,total:0,votes:0,seen:new Set()};
-  entry.total+=score;if(!entry.seen.has(variant)){entry.votes++;entry.seen.add(variant)}if(score>entry.best)entry.best=score;map.set(key,entry);
+  entry.total+=score;if(!entry.seen.has(variant)){entry.votes++;entry.seen.add(variant)}if(score>(entry.best||0))entry.best=score;map.set(key,entry);
  };
  for(let ri=0;ri<results.length;ri++){
   const result=results[ri],lines=Array.isArray(result.lines)?result.lines:[],height=Math.max(...lines.map(line=>Number(line.bbox?.y1)||0),0);
@@ -117,7 +117,7 @@ function instagramDetailsFromOcr(results){
    for(const m of t.matchAll(/(?:https?:\/\/)?(?:www\.)?instagram[.]com[/]([A-Za-z0-9._]{1,30})/ig))add(urls,m[1],score,ri);
    for(const m of t.matchAll(/@([A-Za-z0-9._]{1,30})/g))add(users,m[1],score,ri);
    const y=Number(line.bbox?.y0);
-   if(score>=60&&height>0&&Number.isFinite(y)&&y<height*.48&&/^[A-Za-z0-9._]{2,30}$/.test(t))add(users,t,score,ri);
+   const candidate=t.replace(/^@/,'').replace(/[.…]+$/,'').trim();if(score>=52&&height>0&&Number.isFinite(y)&&y<height*.68&&/^[A-Za-z0-9._]{2,30}$/.test(candidate))add(users,candidate,score,ri);
   }
  }
  const pick=map=>{
