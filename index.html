@@ -142,9 +142,9 @@ async function scanInstagramPhoto(file){
    await worker.setParameters({tessedit_char_whitelist:'@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._/:',preserve_interword_spaces:'1'});
    for(let i=0;i<variants.length;i++){show('Lecture du profil · '+(i+1)+' / '+variants.length+'…');await worker.setParameters({tessedit_pageseg_mode:variants[i].mode});const recognized=await worker.recognize(variants[i].blob);results.push(recognized.data)}
   }finally{await worker.terminate()}
-  const d=instagramDetailsFromOcr(results),f=document.getElementById('contactForm');
-  if(d.username)f.elements.pseudo.value='@'+d.username;if(d.profileUrl)f.elements.instagram.value=d.profileUrl;else if(d.username)f.elements.instagram.value='https://www.instagram.com/'+d.username+'/';
-  if(d.username&&d.profileUrl)show('Pseudo et lien détectés. Vérifie les deux champs avant d’enregistrer.');
+  const d=instagramDetailsFromOcr(results),f=document.getElementById('contactForm'),profileUrl=d.profileUrl||(d.username?'https://www.instagram.com/'+d.username+'/':'');
+  if(d.username)f.elements.pseudo.value='@'+d.username;if(profileUrl)f.elements.instagram.value=profileUrl;
+  if(d.username&&profileUrl)show(d.profileUrl?'Pseudo et lien détectés. Vérifie les deux champs avant d’enregistrer.':'Pseudo détecté ; lien Instagram correspondant prérempli. Vérifie les deux champs avant d’enregistrer.');
   else if(d.username)show('Pseudo détecté ; lien non reconnu. Le pseudo reste dans le formulaire.',true);
   else if(d.profileUrl)show('Lien détecté ; pseudo non reconnu. Le lien reste dans le formulaire.',true);
   else show('Lecture incertaine. Essaie une capture d’écran du profil, où le pseudo apparaît en haut, ou partage le lien Instagram.',true);
