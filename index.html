@@ -139,11 +139,11 @@ async function scanInstagramPhoto(file){
   if(!file.type.startsWith('image/'))throw new Error('invalid-image');
   const variants=await instagramOcrVariants(file),T=await loadTesseract(),worker=await T.createWorker('eng');const results=[];
   try{
-   await worker.setParameters({tessedit_pageseg_mode:'11',tessedit_char_whitelist:'@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._/:',preserve_interword_spaces:'1'});
-   for(let i=0;i<variants.length;i++){show('Lecture de la photo · '+(i+1)+' / '+variants.length+'…');const recognized=await worker.recognize(variants[i]);results.push(recognized.data)}
+   await worker.setParameters({tessedit_char_whitelist:'@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._/:',preserve_interword_spaces:'1'});
+   for(let i=0;i<variants.length;i++){show('Lecture du profil · '+(i+1)+' / '+variants.length+'…');await worker.setParameters({tessedit_pageseg_mode:variants[i].mode});const recognized=await worker.recognize(variants[i].blob);results.push(recognized.data)}
   }finally{await worker.terminate()}
   const d=instagramDetailsFromOcr(results),f=document.getElementById('contactForm');
-  if(d.username)f.elements.pseudo.value='@'+d.username;if(d.profileUrl)f.elements.instagram.value=d.profileUrl;
+  if(d.username)f.elements.pseudo.value='@'+d.username;if(d.profileUrl)f.elements.instagram.value=d.profileUrl;else if(d.username)f.elements.instagram.value='https://www.instagram.com/'+d.username+'/';
   if(d.username&&d.profileUrl)show('Pseudo et lien détectés. Vérifie les deux champs avant d’enregistrer.');
   else if(d.username)show('Pseudo détecté ; lien non reconnu. Le pseudo reste dans le formulaire.',true);
   else if(d.profileUrl)show('Lien détecté ; pseudo non reconnu. Le lien reste dans le formulaire.',true);
