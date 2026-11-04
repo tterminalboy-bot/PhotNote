@@ -1,7 +1,7 @@
 {
-  "name": "Carnet Photographe",
-  "short_name": "Carnet Photo",
-  "description": "Carnet de shootings cosplay, contacts et autorisations.",
+  "name": "PhotNote",
+  "short_name": "PhotNote",
+  "description": "PhotNote — carnet de shootings cosplay, contacts et autorisations.",
   "lang": "fr-FR",
   "start_url": "./",
   "scope": "./",
