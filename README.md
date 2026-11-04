@@ -1,4 +1,4 @@
-# Carnet Photographe
+# PhotNote
 
 Application web responsive en français pour organiser des shootings cosplay, gérer les fiches des personnes photographiées et suivre les autorisations.
 
@@ -11,7 +11,7 @@ Application web responsive en français pour organiser des shootings cosplay, g�
 - Fiches cosplayers avec nom, pseudo, Instagram, cosplay, lieu de la photo, notes et autorisations de tag/publication.
 - Tableau des personnes avec recherche, tri A–Z / Z–A et choix des colonnes affichées.
 - Modification d'une fiche depuis la ligne correspondante.
-- Export et import des données au format JSON.
+- Export chiffré des données dans un fichier `.cphoto` avec phrase de passe ; import également compatible avec les anciennes sauvegardes JSON.
 - Installation PWA et cache de la coquille de l'application.
 
 ## Sauvegarde du code et inventaire
@@ -28,7 +28,9 @@ Adresse attendue : https://tterminalboy-bot.github.io/carnet-photographe/
 
 ## Stockage et synchronisation
 
-Les données sont conservées dans le stockage local du navigateur (`localStorage`). Elles ne se synchronisent donc pas automatiquement entre PC et téléphone. Un export JSON est nécessaire pour transférer ou sauvegarder les données.
+Les données sont conservées dans le stockage local du navigateur (`localStorage`). Elles ne se synchronisent donc pas automatiquement entre PC et téléphone. Une sauvegarde `.cphoto` chiffrée avec une phrase de passe est nécessaire pour transférer ou sauvegarder les données.
+
+Le mot de passe de sauvegarde reste dans le navigateur et n’est pas transmis. Les données courantes du navigateur ne sont pas chiffrées par cette fonctionnalité.
 
 Le dossier `supabase/` contient uniquement un schéma préparatoire : aucune connexion Supabase n'est active dans cette version. Une base distante et une authentification devront être configurées avant toute synchronisation multi-appareils.
 
