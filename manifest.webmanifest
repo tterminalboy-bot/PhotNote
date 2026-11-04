@@ -1,6 +1,6 @@
 {
-  "name": "Studio Notes — Carnet de photographe",
-  "short_name": "Studio Notes",
+  "name": "Carnet Photographe",
+  "short_name": "Carnet Photo",
   "description": "Carnet de shootings cosplay, contacts et autorisations.",
   "lang": "fr-FR",
   "start_url": "./",
@@ -8,6 +8,7 @@
   "display": "standalone",
   "background_color": "#101017",
   "theme_color": "#11111a",
+  "share_target": { "action": "./", "method": "GET", "params": { "title": "title", "text": "text", "url": "url" } },
   "icons": [
     { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
