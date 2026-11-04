@@ -1,4 +1,4 @@
-# Studio Notes — Carnet de photographe
+# Carnet Photographe
 
 Application web responsive en français pour organiser des shootings cosplay, gérer les fiches des personnes photographiées et suivre les autorisations.
 
