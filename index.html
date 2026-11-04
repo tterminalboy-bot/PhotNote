@@ -67,7 +67,7 @@ const instagramReservedNames=new Set(['www','instagram','share','p','reel','reel
 function instagramProfileFromShare(){
  const params=new URLSearchParams(location.search),raw=[params.get('url'),params.get('text'),params.get('title')].filter(Boolean).join('\n');
  if(!raw)return null;
- const match=raw.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})(?=[/?#\s]|$)/i);
+ const match=raw.match(/(?:^|[\s(<])(?:https?:\/\/)?(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})(?=[/?#\s)]|$)/i);
  if(!match||instagramReservedNames.has(match[1].toLowerCase()))return {invalid:true};
  return {username:match[1],url:'https://www.instagram.com/'+match[1]+'/'};
 }
@@ -231,7 +231,7 @@ function tutorialShow(selector,message,step,finish=false){
  }));
 }
 function tutorialStop(){tutorialTransition++;tutorialActive=false;tutorialStep='';tutorialDraftName='';tutorialEventId=null;document.getElementById('tutorialShade').classList.remove('show');document.getElementById('tutorialCard').classList.remove('show');document.querySelectorAll('.tutorial-target').forEach(x=>x.classList.remove('tutorial-target'));if(tutorialLayer)tutorialLayer.style.zIndex='';tutorialLayer=null}
-function startTutorial(){tutorialActive=true;tutorialDraftName='';tutorialEventId=null;switchView('events');setTimeout(()=>{if(tutorialActive&&tutorialStep==='')tutorialShow('#newEvent','Ce bouton crée un nouveau shooting. Clique dessus pour continuer.','new')},100)}
+function startTutorial(){tutorialActive=true;tutorialStep='';tutorialDraftName='';tutorialEventId=null;switchView('events');setTimeout(()=>{if(tutorialActive&&tutorialStep==='')tutorialShow('#newEvent','Ce bouton crée un nouveau shooting. Clique dessus pour continuer.','new')},100)}
 function tutorialPrevious(){
  if(tutorialStep==='name'){tutorialDraftName=document.getElementById('eventForm').elements.name.value;closeModal('eventModal');switchView('events');tutorialShow('#newEvent','Retour à la création du shooting. Clique sur le bouton ou utilise la flèche pour revenir au formulaire.','new');return}
  if(tutorialStep==='open'){const e=eventById(tutorialEventId)||activeEvents()[0];if(e){openEvent(e.id);tutorialShow('#eventForm [name="name"]','Saisis ou vérifie le nom, puis enregistre le shooting pour revenir à cette étape.','name')}return}
