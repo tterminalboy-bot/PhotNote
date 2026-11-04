@@ -163,9 +163,7 @@ function instagramDetailsFromOcr(results){
   for(const line of lines){
    const t=String(line.text||'').trim(),score=Number(line.confidence)||0;
    for(const m of t.matchAll(/(?:https?:\/\/)?(?:www\.)?instagram[.]com[/]([A-Za-z0-9._]{1,30})/ig))add(urls,m[1],score,ri);
-   for(const m of t.matchAll(/@([A-Za-z0-9._]{1,30})/g))add(users,m[1],score,ri);
-   const y=Number(line.bbox?.y0);
-   const candidate=t.replace(/^@/,'').replace(/[.…]+$/,'').trim();if(score>=52&&height>0&&Number.isFinite(y)&&y<height*.68&&/^[A-Za-z0-9._]{2,30}$/.test(candidate))add(users,candidate,score,ri);
+
   }
  }
  const pick=map=>{
@@ -173,15 +171,21 @@ function instagramDetailsFromOcr(results){
   if(!all.length)return null;
   const top=all[0],runner=all[1];
   if(runner&&top.votes===runner.votes&&top.average-runner.average<12)return null;
-  if(top.votes<2&&top.average<76)return null;
+  if(top.votes<2&&top.average<88)return null;
   return top.handle;
  };
- const username=pick(users),handleFromUrl=pick(urls);
+ // Un pseudo OCR seul peut être un faux positif : on exige la lecture d’un lien de profil.
+ const handleFromUrl=pick(urls),username=handleFromUrl;
  return {username,profileUrl:handleFromUrl&&'https://www.instagram.com/'+handleFromUrl+'/'};
 }
+let lastScanAutoFill={pseudo:'',instagram:''};
 async function scanInstagramPhoto(file){
  const input=document.getElementById('instagramPhoto'),status=document.getElementById('scanStatus'),button=document.getElementById('scanInstagram');if(!file)return;
  const show=(m,bad=false)=>{status.textContent=m;status.style.color=bad?'var(--red)':''};
+ const f=document.getElementById('contactForm');
+ if(lastScanAutoFill.pseudo&&f.elements.pseudo.value===lastScanAutoFill.pseudo)f.elements.pseudo.value='';
+ if(lastScanAutoFill.instagram&&f.elements.instagram.value===lastScanAutoFill.instagram)f.elements.instagram.value='';
+ lastScanAutoFill={pseudo:'',instagram:''};
  button.disabled=true;button.classList.add('is-scanning');show('Préparation et lecture de la photo…');
  try{
   if(!file.type.startsWith('image/'))throw new Error('invalid-image');
@@ -190,18 +194,21 @@ async function scanInstagramPhoto(file){
    await worker.setParameters({tessedit_char_whitelist:'@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._/:',preserve_interword_spaces:'1'});
    for(let i=0;i<variants.length;i++){show('Lecture du profil · '+(i+1)+' / '+variants.length+'…');await worker.setParameters({tessedit_pageseg_mode:variants[i].mode});const recognized=await worker.recognize(variants[i].blob);results.push(recognized.data)}
   }finally{await worker.terminate()}
-  const d=instagramDetailsFromOcr(results),f=document.getElementById('contactForm'),profileUrl=d.profileUrl||(d.username?'https://www.instagram.com/'+d.username+'/':'');
-  if(d.username)f.elements.pseudo.value='@'+d.username;if(profileUrl)f.elements.instagram.value=profileUrl;
-  if(d.username&&profileUrl)show(d.profileUrl?'Pseudo et lien détectés. Vérifie les deux champs avant d’enregistrer.':'Pseudo détecté ; lien Instagram correspondant prérempli. Vérifie les deux champs avant d’enregistrer.');
-  else if(d.username)show('Pseudo détecté ; lien non reconnu. Le pseudo reste dans le formulaire.',true);
-  else if(d.profileUrl)show('Lien détecté ; pseudo non reconnu. Le lien reste dans le formulaire.',true);
-  else show('Lecture incertaine. Essaie une capture d’écran du profil, où le pseudo apparaît en haut, ou partage le lien Instagram.',true);
+  const d=instagramDetailsFromOcr(results);
+  if(d.username){f.elements.pseudo.value='@'+d.username;lastScanAutoFill.pseudo=f.elements.pseudo.value}
+  if(d.profileUrl){f.elements.instagram.value=d.profileUrl;lastScanAutoFill.instagram=d.profileUrl;show('Lien du profil lu. Vérifie le pseudo et le lien avant d’enregistrer.')}
+  else show('Compte introuvable. Aucun nom ni lien n’a été ajouté. Essaie de partager le profil ou de reprendre la photo.',true);
  }catch(error){show(error.message==='ocr-unavailable'?'La lecture automatique ne démarre pas. Vérifie ta connexion, puis réessaie.':'La lecture a échoué. Essaie une capture d’écran nette, sans reflet.',true)}
  finally{button.disabled=false;button.classList.remove('is-scanning');input.value=''}
 }
 document.getElementById('scanInstagram').addEventListener('click',()=>document.getElementById('instagramPhoto').click());
 document.getElementById('instagramPhoto').addEventListener('change',event=>scanInstagramPhoto(event.currentTarget.files[0]));
 
+function instagramUsernameFromUrl(value){
+ const raw=String(value||'').trim();if(!raw)return'';
+ try{const url=new URL(/^https?:\/\//i.test(raw)?raw:'https://'+raw);if(!/(^|\.)instagram\.com$/i.test(url.hostname))return'';const username=decodeURIComponent(url.pathname.split('/').filter(Boolean)[0]||'').replace(/^@/,'');if(!/^[A-Za-z0-9._]{1,30}$/.test(username)||instagramReservedNames.has(username.toLowerCase()))return'';return username}catch{return''}
+}
+document.querySelector('#contactForm [name="instagram"]').addEventListener('input',event=>{const username=instagramUsernameFromUrl(event.currentTarget.value);if(username)document.querySelector('#contactForm [name="pseudo"]').value='@'+username});
 document.getElementById('contactForm').addEventListener('submit',ev=>{ev.preventDefault();const f=ev.currentTarget,instagram=f.elements.instagram.value.trim(),pseudo=f.elements.pseudo.value.trim();if(!pseudo)return;const stamp=now(),fields={pseudo,cosplay:f.elements.cosplay.value.trim(),instagram,location:f.elements.location.value.trim(),eventId:currentEventId,tagRequest:f.elements.tagRequest.checked,publishPermission:f.elements.publishPermission.checked,notes:f.elements.notes.value.trim(),updatedAt:stamp};if(editingContact){const c=data.contacts.find(x=>x.id===editingContact);Object.assign(c,fields)}else data.contacts.push({id:uid(),...fields,createdAt:stamp});closeModal('contactModal');save();notify(editingContact?'Fiche modifiée':'Cosplayer ajouté');editingContact=null});
 document.getElementById('shareSite').onclick=async()=>{const url=location.href.split('#')[0];if(navigator.share){try{await navigator.share({title:'Carnet Photographe',text:'Mon carnet de shootings cosplay',url});return}catch(e){if(e?.name==='AbortError')return}}try{await navigator.clipboard.writeText(url);notify('Lien du site copié')}catch{window.prompt('Copie ce lien :',url)}};
 document.getElementById('exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify({format:'studio-notes-backup',version:2,exportedAt:now(),...data},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='studio-notes-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);notify('Sauvegarde téléchargée')};
